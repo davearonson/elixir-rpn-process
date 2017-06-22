@@ -1,40 +1,38 @@
 defmodule Rpn do
 
-  # CLIENT SIDE
+  use GenServer
+
+  # CLIENT API
 
   def start do
-    {:ok, spawn(Rpn, :loop, [[]])}
+    GenServer.start_link(__MODULE__, [], [])
   end
 
-  def peek(pid) do
+  def peek(server) do
     ref = make_ref()
-    send(pid, {self, ref, :peek})
-    receive do
-      {:ok, ^ref, val} -> val
-    end
+    {^ref, val} = GenServer.call(server, {ref, :peek})
+    val
   end
 
-  def push(pid, cmd) when is_number(cmd) or is_atom(cmd) do
-    send(pid, cmd)
+  def push(server, cmd) when is_number(cmd) or is_atom(cmd) do
+    GenServer.cast(server, cmd)
   end
 
-  # SERVER SIDE
+  # SERVER API
 
-  def loop(state) do
-    new_state = receive do
-      { peer, nonce, :peek } ->
-        send(peer, {:ok, nonce, state})
-        state
-      :+ -> add(state)
-      :- -> sub(state)
-      :x -> mul(state)
-      num when is_number(num) -> [num|state]
-    end
-    loop(new_state)
+  def init(state) do
+    {:ok, state}
   end
 
-  defp add([op1, op2|t]), do: [op1 + op2|t]
-  defp sub([op1, op2|t]), do: [op2 - op1|t]  # NOTE ORDER!
-  defp mul([op1, op2|t]), do: [op1 * op2|t]
+  def handle_call({nonce, :peek}, _from, state) do
+    {:reply, {nonce, state}, state}
+  end
+
+  def handle_cast(:+, [a,b|t]), do: {:noreply, [b+a|t]}
+  def handle_cast(:-, [a,b|t]), do: {:noreply, [b-a|t]}  # NOTE ORDER!
+  def handle_cast(:x, [a,b|t]), do: {:noreply, [b*a|t]}
+  def handle_cast(nm, state) when is_number(nm) do
+    {:noreply, [nm|state]}
+  end
 
 end
