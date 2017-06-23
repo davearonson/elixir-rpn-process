@@ -32,12 +32,16 @@ defmodule Rpn do
     {:reply, {nonce, state}, state}
   end
 
-  def handle_cast(:+, [a,b|t]), do: {:noreply, [b+a|t]}
-  def handle_cast(:-, [a,b|t]), do: {:noreply, [b-a|t]}  # NOTE ORDER!
-  def handle_cast(:x, [a,b|t]), do: {:noreply, [b*a|t]}
-  def handle_cast(:/, [a,b|t]), do: {:noreply, [b/a|t]}  # /0?  Let It Crash!
-  def handle_cast(nm, state) when is_number(nm) do
-    {:noreply, [nm|state]}
+  def handle_cast(what, state) do
+    result = stack_op(what, state)
+    GenServer.cast(Taper, {what, result})
+    {:noreply, result}
   end
+
+  defp stack_op(:+, [a,b|t]), do: [b+a|t]
+  defp stack_op(:-, [a,b|t]), do: [b-a|t]  # NOTE ORDER!
+  defp stack_op(:x, [a,b|t]), do: [b*a|t]
+  defp stack_op(:/, [a,b|t]), do: [b/a|t]  # /0?  Let It Crash!
+  defp stack_op(nm, state) when is_number(nm), do: [nm|state]
 
 end
