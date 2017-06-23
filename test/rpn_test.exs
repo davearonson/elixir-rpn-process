@@ -38,6 +38,14 @@ defmodule RpnTest do
     assert Rpn.peek(pid) == [10]
   end
 
+  test "division" do
+    {:ok, pid} = Rpn.start
+    Rpn.push(pid, 3)
+    Rpn.push(pid, 2)
+    Rpn.push(pid, :/)
+    assert Rpn.peek(pid) == [1.5]
+  end
+
   test "wikipedia example" do
     {:ok, pid} = Rpn.start
     Rpn.push(pid, 5)
@@ -51,4 +59,21 @@ defmodule RpnTest do
     Rpn.push(pid, :-)
     assert Rpn.peek(pid) == [14]
   end
+
+  # re capture_log, Process.flag and assert_receive, see:
+  # https://elixirforum.com/t/how-to-catch-a-termination-in-genserver-cast/2140/5
+  @tag :capture_log
+  test "div by 0 kills it but it gets restarted" do
+    {:ok, pid} = Rpn.start
+    Rpn.push(pid, 3)
+    Rpn.push(pid, 0)
+    old_flag = Process.flag(:trap_exit, true)
+    Rpn.push(pid, :/)
+    assert_receive {:EXIT, pid, _}
+    # do NOT turn flag back on until msg received, else it barfs!
+    Process.flag(:trap_exit, old_flag)
+    refute Process.alive?(pid)  # verify old one dead
+    Rpn.push(Calcy, 3)  # would barf if there is no new Calcy process to accept it
+  end
+
 end

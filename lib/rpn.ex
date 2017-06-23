@@ -4,8 +4,12 @@ defmodule Rpn do
 
   # CLIENT API
 
-  def start do
-    GenServer.start_link(__MODULE__, [], [])
+  def start(options \\ []) do
+    GenServer.start_link(__MODULE__, [], options)
+  end
+
+  def start_link(options \\ []) do
+    start(options)
   end
 
   def peek(server) do
@@ -31,6 +35,7 @@ defmodule Rpn do
   def handle_cast(:+, [a,b|t]), do: {:noreply, [b+a|t]}
   def handle_cast(:-, [a,b|t]), do: {:noreply, [b-a|t]}  # NOTE ORDER!
   def handle_cast(:x, [a,b|t]), do: {:noreply, [b*a|t]}
+  def handle_cast(:/, [a,b|t]), do: {:noreply, [b/a|t]}  # /0?  Let It Crash!
   def handle_cast(nm, state) when is_number(nm) do
     {:noreply, [nm|state]}
   end
